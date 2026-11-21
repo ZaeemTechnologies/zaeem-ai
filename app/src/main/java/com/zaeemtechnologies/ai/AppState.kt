@@ -110,9 +110,23 @@ class AppState(ctx: Context) {
         Thread {
             val sb = StringBuilder()
             try {
-                Llm.stream(p, key, model, listOf("system" to sys) + history) { d ->
+                val cb: (String) -> Unit = { d ->
                     sb.append(d); val s = sb.toString()
                     update(id) { it.copy(msgs = it.msgs.dropLast(1) + Msg("assistant", s)) }
+                }
+                val msgs = listOf("system" to sys) + history
+                try { Llm.stream(p, key, model, msgs, cb) }
+                catch (e: LlmError) {
+                    if (sb.isNotEmpty() || e.message?.startsWith("Model not found") != true) throw e
+                    var alt: String? = if (model != p.defModel) p.defModel else null
+                    if (alt == null) {
+                        val l = try { Llm.models(p, key) } catch (x: Exception) { emptyList() }
+                        alt = l.firstOrNull { it.contains("llama-3.3-70b") } ?: l.firstOrNull { it.contains("flash") && !it.contains("image") }
+                            ?: l.firstOrNull { it.contains("llama") || it.contains("instruct") } ?: l.firstOrNull()
+                    }
+                    if (alt == null || alt == model) throw e
+                    prefs.edit().putString("model_${p.id}", alt).apply()
+                    Llm.stream(p, key, alt, msgs, cb)
                 }
                 if (sb.isEmpty() && !Llm.cancelled) throw LlmError("The provider returned an empty response.")
                 estate = EState.IDLE
