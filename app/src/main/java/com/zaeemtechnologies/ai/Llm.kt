@@ -25,7 +25,7 @@ object Llm {
         val c = URL(p.url).openConnection() as HttpURLConnection
         try {
             c.requestMethod = "POST"; c.connectTimeout = 15000; c.readTimeout = 60000; c.doOutput = true
-            c.setRequestProperty("Authorization", "Bearer $key")
+            c.setRequestProperty("Authorization", "Bearer ${key.trim()}"); c.setRequestProperty("User-Agent", "ZaeemAI/0.2 (Android)")
             c.setRequestProperty("Content-Type", "application/json")
             c.outputStream.use { it.write(body.toByteArray()) }
             val code = c.responseCode
@@ -57,8 +57,13 @@ object Llm {
         val c = URL(p.url.replace("/chat/completions", "/models")).openConnection() as HttpURLConnection
         try {
             c.connectTimeout = 15000; c.readTimeout = 30000
-            c.setRequestProperty("Authorization", "Bearer $key")
-            if (c.responseCode != 200) throw LlmError("Could not load models (HTTP ${c.responseCode}). Check the key and provider.")
+            c.setRequestProperty("Authorization", "Bearer ${key.trim()}")
+            c.setRequestProperty("User-Agent", "ZaeemAI/0.2 (Android)")
+            c.setRequestProperty("Accept", "application/json")
+            if (c.responseCode != 200) {
+                val body = try { c.errorStream?.bufferedReader()?.readText()?.take(160) ?: "" } catch (e: Exception) { "" }
+                throw LlmError("Could not load models from ${p.label} (HTTP ${c.responseCode}). $body")
+            }
             val d = JSONObject(c.inputStream.bufferedReader().readText()).getJSONArray("data")
             return (0 until d.length()).map { d.getJSONObject(it).getString("id").removePrefix("models/") }.sorted()
         } catch (e: IOException) { throw LlmError("Network error: ${e.message ?: "connection failed"}") } finally { c.disconnect() }
