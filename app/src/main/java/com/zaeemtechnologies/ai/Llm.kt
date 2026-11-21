@@ -34,7 +34,7 @@ object Llm {
                 throw LlmError(when (code) {
                     401, 403 -> "Invalid or unauthorized API key (HTTP $code)."
                     429 -> "Rate limit or free quota reached (HTTP 429). Try later or pick another provider in Settings."
-                    404 -> "Model not found: $model. Change the model name in Settings."
+                    404 -> "Model not found: \"$model\" on ${p.label}. In Settings, tap Load available models and pick one."
                     else -> "Provider error HTTP $code ${e.take(160)}"
                 })
             }
@@ -51,5 +51,16 @@ object Llm {
         } catch (e: IOException) {
             if (!cancelled) throw LlmError("Network error: ${e.message ?: "connection failed"}")
         } finally { c.disconnect() }
+    }
+
+    fun models(p: Prov, key: String): List<String> {
+        val c = URL(p.url.replace("/chat/completions", "/models")).openConnection() as HttpURLConnection
+        try {
+            c.connectTimeout = 15000; c.readTimeout = 30000
+            c.setRequestProperty("Authorization", "Bearer $key")
+            if (c.responseCode != 200) throw LlmError("Could not load models (HTTP ${c.responseCode}). Check the key and provider.")
+            val d = JSONObject(c.inputStream.bufferedReader().readText()).getJSONArray("data")
+            return (0 until d.length()).map { d.getJSONObject(it).getString("id").removePrefix("models/") }.sorted()
+        } catch (e: IOException) { throw LlmError("Network error: ${e.message ?: "connection failed"}") } finally { c.disconnect() }
     }
 }

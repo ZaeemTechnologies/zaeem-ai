@@ -29,6 +29,17 @@ class AppState(ctx: Context) {
     var busy by mutableStateOf(false)
     var keyTick by mutableIntStateOf(0)
     var voice: Voice? = null
+    var modelList by mutableStateOf(listOf<String>())
+    var modelMsg by mutableStateOf("")
+    fun loadModels() {
+        val p = prov; val k = secure.get(p.id)
+        if (k.isNullOrBlank()) { modelMsg = "Save a key first."; return }
+        modelMsg = "Loading…"; modelList = emptyList()
+        Thread {
+            try { val m = Llm.models(p, k); modelList = m; modelMsg = "${m.size} models from ${p.label}. Tap one to use it." }
+            catch (e: Exception) { modelMsg = e.message ?: "Failed to load models." }
+        }.start()
+    }
 
     val prov: Prov get() = PROVS.first { it.id == provId }
     val current: Chat? get() = chats.firstOrNull { it.id == curId }

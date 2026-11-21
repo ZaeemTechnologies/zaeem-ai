@@ -217,6 +217,13 @@ fun SettingsScreen(st: AppState) {
             Button({ st.setModel(st.provId, model) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Save model") }
         }
         item {
+            OutlinedButton({ st.loadModels() }, enabled = st.hasKey(), modifier = Modifier.heightIn(min = 48.dp)) { Text("Load available models") }
+            if (st.modelMsg.isNotEmpty()) Text(st.modelMsg, color = Zaeem.Secondary)
+        }
+        items(st.modelList) { id ->
+            Text(id, Modifier.fillMaxWidth().clickable { model = id; st.setModel(st.provId, id) }.heightIn(min = 40.dp).padding(vertical = 8.dp), color = Zaeem.Ice)
+        }
+        item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(st.speak, { st.updateSpeak(it) }); Spacer(Modifier.width(8.dp)); Text("Speak replies aloud")
             }
