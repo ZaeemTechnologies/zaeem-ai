@@ -11,6 +11,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,19 +52,42 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() { voice?.release(); super.onDestroy() }
 }
 
-private val tabs = listOf("Home", "Chats", "Tools", "Settings")
+@Composable
+fun Glass(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Zaeem.Elevated, Zaeem.Surface)), RoundedCornerShape(16.dp))
+        .border(1.dp, Zaeem.Border, RoundedCornerShape(16.dp)).padding(14.dp), content = content)
+}
+
+@Composable
+fun Tile(icon: String, title: String, sub: String, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.heightIn(min = 92.dp).background(Brush.verticalGradient(listOf(Zaeem.Elevated, Zaeem.Surface)), RoundedCornerShape(16.dp))
+        .border(1.dp, Zaeem.Border, RoundedCornerShape(16.dp)).clickable { onClick() }.padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text(icon, fontSize = 22.sp); Text(title, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        Text(sub, color = Zaeem.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+    }
+}
+
+private val tabs = listOf("⌂  Home", "💬  Chats", "▦  Tools", "⚙  Settings")
 
 @Composable
 fun Shell(st: AppState) {
     var tab by remember { mutableIntStateOf(0) }
-    Scaffold(containerColor = Zaeem.Background, bottomBar = {
-        NavigationBar(containerColor = Zaeem.Surface) { tabs.forEachIndexed { i, t ->
+    Scaffold(containerColor = Zaeem.Background, topBar = {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("ZAEEM AI", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("By Zaeem Technologies", color = Zaeem.Secondary, fontSize = 11.sp)
+            }
+        }
+    }, bottomBar = {
+        NavigationBar(containerColor = Color(0xFF050D18)) { tabs.forEachIndexed { i, t ->
             NavigationBarItem(selected = tab == i, onClick = { tab = i }, icon = {}, label = { Text(t) },
                 alwaysShowLabel = true, modifier = Modifier.heightIn(min = 48.dp)) } }
     }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                0 -> Home(st)
+                0 -> Home(st) { tab = 2 }
                 1 -> Chats(st) { tab = 0 }
                 2 -> Tools(st)
                 else -> SettingsScreen(st)
@@ -99,7 +127,7 @@ private fun label(e: EState) = when (e) {
 }
 
 @Composable
-fun Home(st: AppState) {
+fun Home(st: AppState, onMemory: () -> Unit = {}) {
     val ctx = LocalContext.current
     var input by remember { mutableStateOf("") }
     val perm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
@@ -109,29 +137,53 @@ fun Home(st: AppState) {
     val msgs = st.current?.msgs ?: emptyList()
     LaunchedEffect(msgs.size, msgs.lastOrNull()?.text?.length) { if (msgs.isNotEmpty()) list.scrollToItem(msgs.size - 1) }
     Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Emblem(st, if (msgs.isEmpty()) 180.dp else 96.dp)
-        Text(label(st.estate), color = Zaeem.Secondary)
+        Emblem(st, if (msgs.isEmpty()) 200.dp else 96.dp)
+        if (st.estate != EState.IDLE) Text(label(st.estate), color = Zaeem.Ice, fontWeight = FontWeight.SemiBold)
         if (st.status.isNotEmpty()) Text(st.status, color = Zaeem.Warning, modifier = Modifier.padding(4.dp))
         if (msgs.isEmpty()) {
-            Text("Hello, I'm Zaeem.", style = MaterialTheme.typography.headlineMedium)
+            Text("Hello, I'm Zaeem.", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(if (st.hasKey()) "How may I assist you today?" else "Add a free ${st.prov.label} API key in Settings to begin.", color = Zaeem.Secondary)
+        }
+        Row(Modifier.padding(vertical = 8.dp).border(1.dp, Zaeem.Border, RoundedCornerShape(24.dp)).padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(if (st.hasKey()) "☁ Connected to ${st.prov.label}" else "☁ No ${st.prov.label} key", fontSize = 13.sp)
+            Spacer(Modifier.width(6.dp))
+            Box(Modifier.size(8.dp).background(if (st.hasKey()) Zaeem.Ok else Zaeem.Warning, CircleShape))
+        }
+        if (msgs.isEmpty()) {
+            val tileMod = Modifier.weight(1f)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Tile("💬", "AI Chat", "Talk with AI", tileMod) {}
+                    Tile("🎙", "Voice", "Voice assistant", tileMod) {
+                        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+                            st.voice?.listen { st.send(it) } else perm.launch(Manifest.permission.RECORD_AUDIO) }
+                    Tile("📷", "Vision", "Coming soon", tileMod) { st.status = "Vision is not implemented yet." }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Tile("📄", "Documents", "Coming soon", tileMod) { st.status = "Documents are not implemented yet." }
+                    Tile("🧠", "Memory", "Personal context", tileMod) { onMemory() }
+                    Tile("▦", "Actions", "Coming soon", tileMod) { st.status = "Device actions are not implemented yet." }
+                }
+            }
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(msgs) { m ->
                 val me = m.role == "user"
                 Box(Modifier.fillMaxWidth(), contentAlignment = if (me) Alignment.CenterEnd else Alignment.CenterStart) {
                     Text(m.text.ifEmpty { "…" }, color = if (me) Zaeem.OnAzure else Zaeem.Text,
-                        modifier = Modifier.widthIn(max = 300.dp).background(if (me) Zaeem.Azure else Zaeem.Elevated, RoundedCornerShape(14.dp)).padding(10.dp))
+                        modifier = Modifier.widthIn(max = 300.dp).background(if (me) Zaeem.Azure else Zaeem.Elevated, RoundedCornerShape(18.dp)).padding(12.dp))
                 }
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            OutlinedTextField(input, { input = it }, Modifier.weight(1f), placeholder = { Text("Message Zaeem") }, maxLines = 4)
+            OutlinedTextField(input, { input = it }, Modifier.weight(1f), placeholder = { Text("Ask ZAEEM AI anything…") }, maxLines = 4,
+                shape = RoundedCornerShape(28.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Zaeem.Ice, unfocusedBorderColor = Zaeem.Border))
             Button(onClick = {
                 if (st.estate == EState.LISTENING) st.voice?.cancelListen()
                 else if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
                     st.voice?.listen { st.send(it) } else perm.launch(Manifest.permission.RECORD_AUDIO)
-            }, modifier = Modifier.heightIn(min = 48.dp)) { Text(if (st.estate == EState.LISTENING) "■" else "🎙") }
+            }, modifier = Modifier.size(52.dp), shape = CircleShape, contentPadding = PaddingValues(0.dp)) { Text(if (st.estate == EState.LISTENING) "■" else "🎙") }
             if (st.busy) Button(onClick = { st.stop() }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Stop") }
             else Button(onClick = { st.send(input); input = "" }, enabled = input.isNotBlank(), modifier = Modifier.heightIn(min = 48.dp)) { Text("Send") }
         }
@@ -192,11 +244,11 @@ fun SettingsScreen(st: AppState) {
     var confirmWipe by remember { mutableStateOf(false) }
     st.keyTick
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Text("Intelligence provider", style = MaterialTheme.typography.titleLarge) }
+        item { Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("AI Providers", color = Zaeem.Ice, modifier = Modifier.padding(top = 8.dp)) }
         items(PROVS) { p ->
-            Row(Modifier.fillMaxWidth().clickable { st.setProv(p.id) }.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().background(Zaeem.Surface, RoundedCornerShape(14.dp)).border(1.dp, if (st.provId == p.id) Zaeem.Ice else Zaeem.Border, RoundedCornerShape(14.dp)).clickable { st.setProv(p.id) }.heightIn(min = 52.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(st.provId == p.id, { st.setProv(p.id) })
-                Text("${p.label}  ·  key ${if (st.hasKey(p.id)) "saved" else "not set"}")
+                Column { Text(p.label, fontWeight = FontWeight.SemiBold); Text(if (st.hasKey(p.id)) "Key saved ✓" else "Key not set", color = if (st.hasKey(p.id)) Zaeem.Ok else Zaeem.Muted, fontSize = 12.sp) }
             }
         }
         item {
