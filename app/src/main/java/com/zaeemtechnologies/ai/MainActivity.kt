@@ -74,7 +74,7 @@ private val tabs = listOf("⌂  Home", "💬  Chats", "▦  Tools", "⚙  Settin
 fun Shell(st: AppState) {
     var tab by remember { mutableIntStateOf(0) }
     Scaffold(containerColor = Zaeem.Background, topBar = {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("ZAEEM AI", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Text("By Zaeem Technologies", color = Zaeem.Secondary, fontSize = 11.sp)
