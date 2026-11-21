@@ -12,7 +12,8 @@ data class Prov(val id: String, val label: String, val url: String, val defModel
 val PROVS = listOf(
     Prov("groq", "Groq", "https://api.groq.com/openai/v1/chat/completions", "llama-3.3-70b-versatile", "console.groq.com/keys"),
     Prov("gemini", "Gemini", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-2.0-flash", "aistudio.google.com/apikey"),
-    Prov("openrouter", "OpenRouter", "https://openrouter.ai/api/v1/chat/completions", "meta-llama/llama-3.3-70b-instruct:free", "openrouter.ai/keys"))
+    Prov("openrouter", "OpenRouter", "https://openrouter.ai/api/v1/chat/completions", "meta-llama/llama-3.3-70b-instruct:free", "openrouter.ai/keys"),
+    Prov("local", "On-device (offline)", "", "qwen3-1.7b", "n/a"))
 
 class LlmError(msg: String) : Exception(msg)
 

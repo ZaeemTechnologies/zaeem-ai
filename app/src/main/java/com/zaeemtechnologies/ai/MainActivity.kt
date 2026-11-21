@@ -142,11 +142,11 @@ fun Home(st: AppState, onMemory: () -> Unit = {}) {
         if (st.status.isNotEmpty()) Text(st.status, color = Zaeem.Warning, modifier = Modifier.padding(4.dp))
         if (msgs.isEmpty()) {
             Text("Hello, I'm Zaeem.", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text(if (st.hasKey()) "How may I assist you today?" else "Add a free ${st.prov.label} API key in Settings to begin.", color = Zaeem.Secondary)
+            Text(if (st.hasKey()) "How may I assist you today?" else (if (st.provId == "local") "Install the on-device model in Settings to begin." else "Add a free ${st.prov.label} API key in Settings to begin."), color = Zaeem.Secondary)
         }
         Row(Modifier.padding(vertical = 8.dp).border(1.dp, Zaeem.Border, RoundedCornerShape(24.dp)).padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Text(if (st.hasKey()) "☁ Connected to ${st.prov.label}" else "☁ No ${st.prov.label} key", fontSize = 13.sp)
+            Text(if (st.provId == "local") (if (LocalLlm.installed) "📱 Offline Intelligence · Running on your device" else "📱 On-device model not installed") else if (st.hasKey()) "☁ Connected to ${st.prov.label}" else "☁ No ${st.prov.label} key", fontSize = 13.sp)
             Spacer(Modifier.width(6.dp))
             Box(Modifier.size(8.dp).background(if (st.hasKey()) Zaeem.Ok else Zaeem.Warning, CircleShape))
         }
@@ -238,6 +238,31 @@ fun Tools(st: AppState) {
 }
 
 @Composable
+fun LocalCard() {
+    val ctx = LocalContext.current
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u -> if (u != null) LocalLlm.importFrom(ctx, u) }
+    val mb = { b: Long -> "%.0f MB".format(b / 1048576.0) }
+    Glass {
+        Text("On-device model", fontWeight = FontWeight.Bold)
+        Text(LocalLlm.NAME, color = Zaeem.Ice)
+        Text("Licence: ${LocalLlm.LICENSE}", color = Zaeem.Muted, fontSize = 12.sp)
+        Text("Download size: ${mb(LocalLlm.SIZE)}. After install, chat runs on this phone with no internet; nothing is sent to any server. Quality is below cloud models.", color = Zaeem.Secondary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
+        if (LocalLlm.installed) Text("Installed ✓  (${mb(LocalLlm.sizeOnDisk)})", color = Zaeem.Ok)
+        if (LocalLlm.dlActive && LocalLlm.dlBytes > 0) {
+            LinearProgressIndicator(progress = { (LocalLlm.dlBytes.toFloat() / LocalLlm.SIZE).coerceIn(0f, 1f) }, Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            Text("${mb(LocalLlm.dlBytes)} / ${mb(LocalLlm.SIZE)}", fontSize = 12.sp)
+        }
+        if (LocalLlm.msg.isNotEmpty()) Text(LocalLlm.msg, color = Zaeem.Warning, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+            if (LocalLlm.dlActive) Button({ LocalLlm.pause() }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Pause") }
+            else if (!LocalLlm.installed) Button({ LocalLlm.download() }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Download") }
+            else OutlinedButton({ LocalLlm.delete() }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Delete model") }
+            OutlinedButton({ pick.launch(arrayOf("*/*")) }, enabled = !LocalLlm.dlActive, modifier = Modifier.heightIn(min = 48.dp)) { Text("Import file") }
+        }
+    }
+}
+
+@Composable
 fun SettingsScreen(st: AppState) {
     var key by remember { mutableStateOf("") }
     var model by remember(st.provId, st.keyTick) { mutableStateOf(st.model()) }
@@ -248,9 +273,10 @@ fun SettingsScreen(st: AppState) {
         items(PROVS) { p ->
             Row(Modifier.fillMaxWidth().background(Zaeem.Surface, RoundedCornerShape(14.dp)).border(1.dp, if (st.provId == p.id) Zaeem.Ice else Zaeem.Border, RoundedCornerShape(14.dp)).clickable { st.setProv(p.id) }.heightIn(min = 52.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(st.provId == p.id, { st.setProv(p.id) })
-                Column { Text(p.label, fontWeight = FontWeight.SemiBold); Text(if (st.hasKey(p.id)) "Key saved ✓" else "Key not set", color = if (st.hasKey(p.id)) Zaeem.Ok else Zaeem.Muted, fontSize = 12.sp) }
+                Column { Text(p.label, fontWeight = FontWeight.SemiBold); Text(if (p.id == "local") (if (LocalLlm.installed) "Model installed ✓" else "Model not installed") else if (st.hasKey(p.id)) "Key saved ✓" else "Key not set", color = if (st.hasKey(p.id)) Zaeem.Ok else Zaeem.Muted, fontSize = 12.sp) }
             }
         }
+        if (st.provId == "local") item { LocalCard() } else {
         item {
             Text("Get a free key at ${st.prov.keyHelp}. Only the selected provider receives your messages. Free tiers have their own data terms.", color = Zaeem.Secondary)
         }
@@ -274,6 +300,7 @@ fun SettingsScreen(st: AppState) {
         }
         items(st.modelList) { id ->
             Text(id, Modifier.fillMaxWidth().clickable { model = id; st.setModel(st.provId, id) }.heightIn(min = 40.dp).padding(vertical = 8.dp), color = Zaeem.Ice)
+        }
         }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {

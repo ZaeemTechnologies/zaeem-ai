@@ -43,10 +43,10 @@ class AppState(ctx: Context) {
 
     val prov: Prov get() = PROVS.first { it.id == provId }
     val current: Chat? get() = chats.firstOrNull { it.id == curId }
-    fun hasKey(id: String = provId) = !secure.get(id).isNullOrBlank()
+    fun hasKey(id: String = provId) = if (id == "local") LocalLlm.installed else !secure.get(id).isNullOrBlank()
     fun model(id: String = provId) = prefs.getString("model_$id", null) ?: PROVS.first { it.id == id }.defModel
 
-    init { load() }
+    init { LocalLlm.init(ctx); load() }
 
     private fun load() {
         try {
@@ -96,7 +96,8 @@ class AppState(ctx: Context) {
         val text = raw.trim()
         if (text.isEmpty() || busy) return
         val p = prov
-        val key = secure.get(p.id)
+        val key = if (p.id == "local") "local" else secure.get(p.id)
+        if (p.id == "local" && !LocalLlm.installed) { status = "No on-device model installed. Open Settings → On-device (offline)."; estate = EState.ERROR; return }
         if (key.isNullOrBlank()) { status = "No API key for ${p.label}. Add one in Settings."; estate = EState.ERROR; return }
         if (memoryOn && text.startsWith("remember ", true)) addMemory(text.substring(9))
         if (current == null) newChat()
@@ -115,6 +116,7 @@ class AppState(ctx: Context) {
                     update(id) { it.copy(msgs = it.msgs.dropLast(1) + Msg("assistant", s)) }
                 }
                 val msgs = listOf("system" to sys) + history
+                if (p.id == "local") { LocalLlm.chat(sys, history.dropLast(1), history.last().second, cb) } else
                 try { Llm.stream(p, key, model, msgs, cb) }
                 catch (e: LlmError) {
                     if (sb.isNotEmpty() || e.message?.startsWith("Model not found") != true) throw e
