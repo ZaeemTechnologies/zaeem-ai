@@ -1,0 +1,2 @@
+{"policy":{"maxAdditionalSpendUSD":0,"requireVerifiedFreeAccount":true,"allowPaidModels":false,"allowUnverifiedModels":false,"allowSilentFallback":false},
+"providers":[{"id":"groq","enabled":false,"modelId":null,"freeEligibility":"unverified"},{"id":"gemini","enabled":false,"modelId":null,"freeEligibility":"unverified"},{"id":"openrouter","enabled":false,"modelId":null,"freeEligibility":"unverified"},{"id":"cloudflare","enabled":false,"modelId":null,"freeEligibility":"unverified"},{"id":"anthropic","enabled":false,"modelId":null,"freeEligibility":"unverified"}]}
