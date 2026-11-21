@@ -165,7 +165,7 @@ fun Tools(st: AppState) {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Memory", style = MaterialTheme.typography.titleLarge)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Switch(st.memoryOn, { st.setMemoryOn(it) }); Spacer(Modifier.width(8.dp))
+            Switch(st.memoryOn, { st.updateMemoryOn(it) }); Spacer(Modifier.width(8.dp))
             Text("Use memory (stored only on this phone; sent to your chosen provider as part of each request)")
         }
         Text("Tip: with memory on, start a message with “remember …” to save it.", color = Zaeem.Secondary)
@@ -218,7 +218,7 @@ fun SettingsScreen(st: AppState) {
         }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(st.speak, { st.setSpeak(it) }); Spacer(Modifier.width(8.dp)); Text("Speak replies aloud")
+                Switch(st.speak, { st.updateSpeak(it) }); Spacer(Modifier.width(8.dp)); Text("Speak replies aloud")
             }
         }
         item {

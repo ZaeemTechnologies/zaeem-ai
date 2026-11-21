@@ -63,8 +63,8 @@ class AppState(ctx: Context) {
 
     fun setProv(id: String) { provId = id; prefs.edit().putString("prov", id).apply() }
     fun setModel(id: String, m: String) { prefs.edit().putString("model_$id", m.trim()).apply(); keyTick++ }
-    fun setSpeak(v: Boolean) { speak = v; prefs.edit().putBoolean("speak", v).apply() }
-    fun setMemoryOn(v: Boolean) { memoryOn = v; prefs.edit().putBoolean("memoryOn", v).apply() }
+    fun updateSpeak(v: Boolean) { speak = v; prefs.edit().putBoolean("speak", v).apply() }
+    fun updateMemoryOn(v: Boolean) { memoryOn = v; prefs.edit().putBoolean("memoryOn", v).apply() }
     fun saveKey(id: String, k: String) { secure.put(id, k.trim()); keyTick++ }
     fun removeKey(id: String) { secure.remove(id); keyTick++ }
 
